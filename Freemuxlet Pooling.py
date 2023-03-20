@@ -1,7 +1,7 @@
 import pandas as pd
 import time
 import os
-from itertools import combinations
+from itertools import combinations, permutations
 import random
 
 #Sets the working directory to the folder in which this .py file resides.
@@ -35,13 +35,20 @@ def pad_generator(s_list):
     column_list = df.columns.tolist()
     unique_participants = df[column_list[0]].unique().tolist()
     for participant in unique_participants:
-        pool_assignment_dictionary[participant] = {'Sample_IDs': {}}
+        pool_assignment_dictionary[participant] = {'Sample_IDs': {}, "Participant_Attributes": {}}
         participant_sample_count = 0
         for index, row in df.iterrows():
             if row['Participant ID'] == participant:
-                pool_assignment_dictionary[participant]['Sample_IDs'][row['Sample ID']] = 0
+                pool_assignment_dictionary[participant]['Sample_IDs'][row['Sample ID']] = {'Pool': 0}
                 participant_sample_count += 1
+                if len(column_list) > 2:
+                    for attribute in column_list[2:]:
+                        if 'sample' in attribute.lower():
+                            pool_assignment_dictionary[participant]['Sample_IDs'][row['Sample ID']][attribute] = [row[attribute]][0]
+                        elif 'participant' in attribute.lower():
+                            pool_assignment_dictionary[participant]["Participant_Attributes"][attribute] = [row[attribute]][0]
         pool_assignment_dictionary[participant]['Sample_Count'] = participant_sample_count
+    print(pool_assignment_dictionary)
     return pool_assignment_dictionary
 
 def minimum_pools_with_control_in_all_pools(min_pools_pad):
@@ -78,25 +85,40 @@ def itertools_combo_generator(i_c_g_pad):
 
 def combo_selection(c_s_pad, number_pools):
     pool_counter_dict = {}
+    participant_attribute_counter = {}
     unique_combo_list = []
     for i in range(1, number_pools + 1):
         pool_counter_dict[i] = 0
+        participant_attribute_counter[i] = {}
+        for key in c_s_pad:
+            for p_attribute in c_s_pad[key]["Participant_Attributes"]:
+                if not p_attribute in participant_attribute_counter[i]:
+                    participant_attribute_counter[i][p_attribute] = {}
+                participant_attribute_counter[i][p_attribute][c_s_pad[key]["Participant_Attributes"][p_attribute]] = 0
     for key in c_s_pad:
         best_combo = ()
-        lowest_pool_population = 1000000
+        lowest_combo_score = 1000000
         for combo in c_s_pad[key]["Combos"]:
-            existing_pool_population = 0
+            combo_score = 0
             if not combo in unique_combo_list:
                 for pool_integer in combo:
-                    existing_pool_population += pool_counter_dict[pool_integer]
-                if existing_pool_population < lowest_pool_population:
-                    lowest_pool_population = existing_pool_population
+                    combo_score += pool_counter_dict[pool_integer]
+                    for p_att_key in participant_attribute_counter[pool_integer]:
+                        combo_score += participant_attribute_counter[pool_integer][p_att_key][c_s_pad[key]["Participant_Attributes"][p_att_key]]
+                if combo_score < lowest_combo_score:
+                    lowest_combo_score = combo_score
                     best_combo = combo
         unique_combo_list.append(best_combo)
         for pool_integer in best_combo:
             pool_counter_dict[pool_integer] += 1
+            for p_att_key in participant_attribute_counter[pool_integer]:
+                participant_attribute_counter[pool_integer][p_att_key][c_s_pad[key]["Participant_Attributes"][p_att_key]] += 1
         c_s_pad[key]["Selected_Combo"] = best_combo
     return(c_s_pad)
+
+def permutation_selection(ps_pad):
+    for key in ps_pad:
+        print(list(permutations(ps_pad[key]['Selected_Combo'])))
 
 def sample_assignment_to_pools(sap_pad):
     for key in sap_pad:
@@ -112,7 +134,7 @@ def sample_assignment_to_pools(sap_pad):
             pro_index = random.randint(0, (len(pro_numerical_array) - 1))
             numerical_array.append(pro_numerical_array.pop(pro_index))
         for random_index, key_2 in zip(numerical_array, sap_pad[key]['Sample_IDs']):
-            sap_pad[key]['Sample_IDs'][key_2] = sap_pad[key]['Selected_Combo'][random_index]
+            sap_pad[key]['Sample_IDs'][key_2]['Pool'] = sap_pad[key]['Selected_Combo'][random_index]
     return sap_pad
 
 def output_df(output_pad, total_number_pools):
@@ -126,7 +148,7 @@ def output_df(output_pad, total_number_pools):
         index += 1
     for key in output_pad:
         for key_2, value_2 in output_pad[key]['Sample_IDs'].items():
-            df.loc[value_2 - 1, key] = key_2
+            df.loc[value_2['Pool'] - 1, key] = key_2
     df.to_csv('my_data.csv', index=False)
 
 def main():
@@ -136,6 +158,7 @@ def main():
     pad = pad_generator(user_sample_list)
     pad_combos, pool_count = itertools_combo_generator(pad)
     pad_selected_combo = combo_selection(pad_combos, pool_count)
+    permutation_selection(pad_selected_combo)
     pad_pools_assigned = sample_assignment_to_pools(pad_selected_combo)
     output_df(pad_pools_assigned, pool_count)
     print(f"\n--- {(time.time() - start_time):.2f} seconds ---\n")
