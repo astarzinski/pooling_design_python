@@ -3,6 +3,7 @@ import time
 import os
 from itertools import combinations, permutations
 import random
+from datetime import datetime
 
 #Sets the working directory to the folder in which this .py file resides.
 def directory_set_and_folder_creation():
@@ -48,7 +49,7 @@ def pad_generator(s_list):
                         elif 'participant' in attribute.lower():
                             pool_assignment_dictionary[participant]["Participant_Attributes"][attribute] = [row[attribute]][0]
         pool_assignment_dictionary[participant]['Sample_Count'] = participant_sample_count
-    print(pool_assignment_dictionary)
+    #print(pool_assignment_dictionary)
     return pool_assignment_dictionary
 
 def minimum_pools_with_control_in_all_pools(min_pools_pad):
@@ -70,18 +71,14 @@ def user_determined_pool_count():
                 print(f'{pool_count} is not recognized as an integer!')
         return False
 
-def itertools_combo_generator(i_c_g_pad):
+def pool_count_determination(i_c_g_pad):
     pools = user_determined_pool_count()
     if not pools:
         pools = minimum_pools_with_control_in_all_pools(i_c_g_pad)
     elif pools < minimum_pools_with_control_in_all_pools(i_c_g_pad):
         print('There are too many samples for one or more patients to use that few sample pools!')
         pools = minimum_pools_with_control_in_all_pools(i_c_g_pad)
-    for key in i_c_g_pad:
-        r = i_c_g_pad[key]['Sample_Count']
-        combos = combinations(range(1, pools + 1), r)
-        i_c_g_pad[key]['Combos'] = list(combos)
-    return i_c_g_pad, pools
+    return pools
 
 def combo_selection(c_s_pad, number_pools):
     pool_counter_dict = {}
@@ -98,7 +95,7 @@ def combo_selection(c_s_pad, number_pools):
     for key in c_s_pad:
         best_combo = ()
         lowest_combo_score = 1000000
-        for combo in c_s_pad[key]["Combos"]:
+        for combo in combinations(range(1, number_pools + 1), c_s_pad[key]['Sample_Count']):
             combo_score = 0
             if not combo in unique_combo_list:
                 for pool_integer in combo:
@@ -114,11 +111,41 @@ def combo_selection(c_s_pad, number_pools):
             for p_att_key in participant_attribute_counter[pool_integer]:
                 participant_attribute_counter[pool_integer][p_att_key][c_s_pad[key]["Participant_Attributes"][p_att_key]] += 1
         c_s_pad[key]["Selected_Combo"] = best_combo
+    print(pool_counter_dict)
+    print(participant_attribute_counter)
     return(c_s_pad)
 
-def permutation_selection(ps_pad):
+def permutation_selection(ps_pad, perm_pool_count):
+    sample_attribut_counter = {}
+    for i in range(1, perm_pool_count + 1):
+        sample_attribut_counter[i] = {}
+        for key in ps_pad:
+            for sample in ps_pad[key]['Sample_IDs']:
+                for s_attribute in ps_pad[key]['Sample_IDs'][sample]:
+                    if s_attribute == 'Pool':
+                        continue
+                    else:
+                        if not s_attribute in sample_attribut_counter[i]:
+                            sample_attribut_counter[i][s_attribute] = {}
+                        sample_attribut_counter[i][s_attribute][ps_pad[key]['Sample_IDs'][sample][s_attribute]] = 0
     for key in ps_pad:
-        print(list(permutations(ps_pad[key]['Selected_Combo'])))
+        best_perm = ()
+        lowest_perm_score = 1000000
+        for perm in permutations(ps_pad[key]['Selected_Combo']):
+            perm_score = 0
+            for pool_integer, sample in zip(perm, ps_pad[key]['Sample_IDs']):
+                for s_att_key in sample_attribut_counter[pool_integer]:
+                    perm_score += sample_attribut_counter[pool_integer][s_att_key][ps_pad[key]['Sample_IDs'][sample][s_att_key]]
+            if perm_score < lowest_perm_score:
+                lowest_perm_score = perm_score
+                best_perm = perm
+        for pool_integer, sample in zip(best_perm, ps_pad[key]['Sample_IDs']):
+            for s_att_key in sample_attribut_counter[pool_integer]:
+                sample_attribut_counter[pool_integer][s_att_key][ps_pad[key]['Sample_IDs'][sample][s_att_key]] += 1
+        ps_pad[key]["Selected_Perm"] = best_perm
+    print(sample_attribut_counter)
+    return(ps_pad)
+        #print(list(permutations(ps_pad[key]['Selected_Combo'])))
 
 def sample_assignment_to_pools(sap_pad):
     for key in sap_pad:
@@ -138,6 +165,7 @@ def sample_assignment_to_pools(sap_pad):
     return sap_pad
 
 def output_df(output_pad, total_number_pools):
+    today = datetime.now()
     participant_list = ['Pool']
     for key in output_pad:
         participant_list.append(key)
@@ -149,16 +177,16 @@ def output_df(output_pad, total_number_pools):
     for key in output_pad:
         for key_2, value_2 in output_pad[key]['Sample_IDs'].items():
             df.loc[value_2['Pool'] - 1, key] = key_2
-    df.to_csv('my_data.csv', index=False)
+    df.to_csv(f'pooling_strategy_{today.strftime("Date_%Y_%m_%d_Time_%H_%M_%S").replace("/","_")}.csv', index=False)
 
 def main():
     start_time = time.time()
     directory_set_and_folder_creation()
     user_sample_list = file_identification()
     pad = pad_generator(user_sample_list)
-    pad_combos, pool_count = itertools_combo_generator(pad)
-    pad_selected_combo = combo_selection(pad_combos, pool_count)
-    permutation_selection(pad_selected_combo)
+    pool_count = pool_count_determination(pad)
+    pad_selected_combo = combo_selection(pad, pool_count)
+    permutation_selection(pad_selected_combo, pool_count)
     pad_pools_assigned = sample_assignment_to_pools(pad_selected_combo)
     output_df(pad_pools_assigned, pool_count)
     print(f"\n--- {(time.time() - start_time):.2f} seconds ---\n")
