@@ -8,9 +8,9 @@ CMD [ "python", "./Freemuxlet_Pooling.py" ]
 
 # use cd to change to python file containing directory to build
 # to build: docker build -t freemuxlet-pooling .
-# to run: docker run -i -t -v /Users/alec/Desktop/Filing_Cabinet/Code/Fong_Lab/Freemuxlet_Pooling_Balance:/mnt/mydata freemuxlet-pooling
+# to run: docker run -i -t -v /Path/to/reference_files.xlsx:/mnt/mydata freemuxlet-pooling
 # docker build --platform linux/amd64 -t freemuxlet-pooling-intel . ##will build for intel compatibility
 
 # to push to a public repository:
-    #docker tag python-sample-records astarzinski/python-sample-records
-    #docker push astarzinski/python-sample-records
+    #docker tag freemuxlet-pooling astarzinski/freemuxlet-pooling
+    #docker push astarzinski/freemuxlet-pooling
