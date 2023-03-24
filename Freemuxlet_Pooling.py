@@ -24,7 +24,7 @@ def directory_set_and_folder_creation():
     if not os.path.exists(os.path.dirname(os.path.abspath(__file__)) + '/Output'):
         os.makedirs(os.path.dirname(os.path.abspath(__file__)) + '/Output')
 
-#Docker functional code
+#Docker directory access (must be defined in the run command)
 '''def directory_set_and_folder_creation():
     os.chdir('/mnt/mydata')
     if not os.path.exists('/mnt/mydata/Output'):
