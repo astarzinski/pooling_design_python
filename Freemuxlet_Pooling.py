@@ -16,6 +16,8 @@ import time
 import os
 from itertools import combinations, permutations
 from datetime import datetime
+from openpyxl import load_workbook
+
 
 #Sets the working directory to the folder in which this .py file resides.
 def directory_set_and_folder_creation():
@@ -282,7 +284,7 @@ def sample_assignment_to_pools(sap_pad):
     return sap_pad
 
 #This function generates a data frame using pandas and exports it to an excel file in the output folder that exists in the same directory as this function.
-def output_df(output_pad, total_number_pools):
+def output_pooling_table(output_pad, total_number_pools):
     #Identifies the current date and time for use in naming the file in a unique manner.
     today = datetime.now()
     #Initializes a list that will be used to create columns for the data frame.
@@ -302,12 +304,41 @@ def output_df(output_pad, total_number_pools):
         df.loc[index, 'Pool'] = i
         df.loc[index, 'HC'] = 'HC'
         index += 1
+    #Set core data entry point values and definitions beneath the pooling strategy.
+    df.loc[(total_number_pools + 1), 'Pool'] = " "
+    df.loc[(total_number_pools + 2), 'Pool'] = " "
+    df.loc[(total_number_pools + 3), 'Pool'] = " "
+    
+    df.loc[(total_number_pools + 4), 'Pool'] = 'Healthy Control:'
+    df.loc[(total_number_pools + 5), 'Pool'] = " "
+    df.loc[(total_number_pools + 6), 'Pool'] = '10X Version:'
+    df.loc[(total_number_pools + 7), 'Pool'] = " "
+    df.loc[(total_number_pools + 8), 'Pool'] = 'Cells Loaded:'
+    df.loc[(total_number_pools + 9), 'Pool'] = " "
+    df.loc[(total_number_pools + 10), 'Pool'] = 'ACK Lysed Samples Highlighted Red'
+    df.loc[(total_number_pools + 11), 'Pool'] = " "
+    df.loc[(total_number_pools + 12), 'Pool'] = 'Potentially Lost Samples Highlighted Grey'
+
     #Loop through the core dictionary one more time to place the sample names in their participants column and assigned pools row.
     for participant in output_pad:
         for sample, sample_info_dict in output_pad[participant]['Sample_IDs'].items():
             df.loc[sample_info_dict['Pool'] - 1, participant] = sample
+    #Set a name for the file based on the current date and time.
+    global file_name 
+    file_name = f'Output/Pooling_Strategy_{today.strftime("Date_%Y_%m_%d_Time_%H_%M_%S").replace("/","_")}.xlsx'
     #Export the data frame to an excel file for use in further experimental planning.
-    df.to_excel(f'Output/Pooling_Strategy_{today.strftime("Date_%Y_%m_%d_Time_%H_%M_%S").replace("/","_")}.xlsx', index=False)
+    df.to_excel(file_name, index=False, sheet_name='Pooling Strategy')
+
+def output_counting_table(output_2_pad):
+
+    book = load_workbook(file_name)
+    writer = pd.ExcelWriter(file_name, engine = 'openpyxl')
+    writer.book = book
+    df = pd.DataFrame()
+    df.to_excel(writer, index=False, sheet_name='Sample Counts')
+    df.to_excel(writer, index=False, sheet_name='Normalization')
+    writer.close()
+
 
 def main():
     start_time = time.time()
@@ -318,6 +349,7 @@ def main():
     pad_selected_combo = combo_selection(pad, pool_count)
     permutation_selection(pad_selected_combo, pool_count)
     pad_pools_assigned = sample_assignment_to_pools(pad_selected_combo)
-    output_df(pad_pools_assigned, pool_count)
+    output_pooling_table(pad_pools_assigned, pool_count)
+    output_counting_table(pad_pools_assigned)
     print(f"\n--- {(time.time() - start_time):.2f} seconds ---\n")
 main()
