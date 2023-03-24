@@ -306,7 +306,7 @@ def output_pooling_table(output_pad, total_number_pools):
         index += 1
     #Set core data entry point values and definitions beneath the pooling strategy.
     df.loc[(total_number_pools + 1), 'Pool'] = " "
-    df.loc[(total_number_pools + 2), 'Pool'] = " "
+    df.loc[(total_number_pools + 2), 'Pool'] = 'Study:'
     df.loc[(total_number_pools + 3), 'Pool'] = " "
     
     df.loc[(total_number_pools + 4), 'Pool'] = 'Healthy Control:'
@@ -329,16 +329,87 @@ def output_pooling_table(output_pad, total_number_pools):
     #Export the data frame to an excel file for use in further experimental planning.
     df.to_excel(file_name, index=False, sheet_name='Pooling Strategy')
 
-def output_counting_table(output_2_pad):
+def output_counting_table(output_2_pad, tot_pool_count):
+    output_list = [['HC', 'HC', 0]]
+    for participant in output_2_pad:
+        for sample in output_2_pad[participant]['Sample_IDs']:
+            participant_list = [0, sample, output_2_pad[participant]['Sample_IDs'][sample]['Pool']]
+            output_list.append(participant_list)
+    output_list.sort(key = lambda x: x[2])
+    i = 1
+    for item in output_list:
+        item[0] = i
+        i += 1
+    
+    df = pd.DataFrame(columns=['Sequence ID',
+                               'Sample ID',
+                               'Pool',
+                               'Sequence ID.',
+                               'Viability (%)',
+                               'Total cells (e6/mL)',
+                               'Viable cells (e6/mL)',
+                               'Number of Cells Transferred (e6/mL)',
+                               'Volume to Tx (uL)',
+                               'Sequence ID..',
+                               'Pool',
+                               'Remaining Cell Mass (e6/mL) *Assumes 500uL Suspension Volume',
+                               'Study-Pt-Tp',
+                               'Remaining Cell Mass + e6',
+                               'Refrozen PBMC',
+                               'Sequence ID...',
+                               'Today\'s Date',])
+    i = 1
+    for item in output_list:
+        df.loc[i, 'Sequence ID'] = item[0]
+        df.loc[i, 'Sample ID'] = item[1]
+        df.loc[i, 'Pool'] = item[2]
+        df.loc[i, 'Sequence ID.',] = f'=A{i+1}'
+        df.loc[i, 'Viable cells (e6/mL)',] = f'=IF(F{i+1}<>"",F{i+1}*E{i+1}/100,"")'
+        df.loc[i, 'Number of Cells Transferred (e6/mL)',] = f'=IF(F{i+1}<>"",I{i+1}/1000*F{i+1},"")'
+        df.loc[i, 'Volume to Tx (uL)',] = f'=IF(F{i+1}<>"",1000*((1.1/{((len(output_list)-1)/tot_pool_count) + 1})/F{i+1}),"")'
+        df.loc[i, 'Sequence ID..',] = f'=A{i+1}'
+        df.loc[i, 'Pool',] = item[2]
+        df.loc[i, 'Remaining Cell Mass (e6/mL) *Assumes 500uL Suspension Volume',] = f'=IF((F{i+1})>1,ROUND((F{i+1}/2)-0.5,1),"")'
+        df.loc[i, 'Study-Pt-Tp',] = f'=concatenate(\'Pooling Strategy\'!B{tot_pool_count + 3},"{item[1]}")'
+        df.loc[i, 'Remaining Cell Mass + e6',] = f'=IF(F{i+1}<>"",concatenate(L{i+1},"e6"),"")'
+        df.loc[i, 'Refrozen PBMC',] = 'Refrozen PBMC'
+        df.loc[i, 'Sequence ID...',] = f'=A{i+1}'
+        df.loc[i, 'Today\'s Date',] = '=today()'
+        i += 1
 
     book = load_workbook(file_name)
-    writer = pd.ExcelWriter(file_name, engine = 'openpyxl')
-    writer.book = book
-    df = pd.DataFrame()
+    writer = pd.ExcelWriter(file_name, engine = 'openpyxl', mode = 'a')
+    writer.Workbook = book
     df.to_excel(writer, index=False, sheet_name='Sample Counts')
-    df.to_excel(writer, index=False, sheet_name='Normalization')
     writer.close()
 
+def output_normalization_table(tot_pools):
+    df = pd.DataFrame(columns=['Pool',
+                               'Total Cells (e6/mL)',
+                               'Viability (%)',
+                               'Initial Volume (uL)',
+                               'Final Volume (uL)',
+                               'Media to Add to Make V2 (uL)',
+                               'Target Cell Conc (e6/mL)',
+                               'Volume to Load (uL)',
+                               'Cells to Load (e6)',
+                               'cDNA Concentration (ng/uL)'])
+    for i in range(1, tot_pools + 1):
+        df.loc[i, 'Pool'] = i
+        i += 1
+
+    df.loc[1, 'Final Volume (uL)'] = '=IF(G2<>"",(B2*D2)/G2,"")'
+    df.loc[1, 'Media to Add to Make V2 (uL)'] = '=IF(E2<>"",E2-D2,"")'
+    df.loc[1, 'Target Cell Conc (e6/mL)'] = '=IF(AND(ISNUMBER(H2),ISNUMBER(I2)),H2/I2*1000,"")'
+    df.loc[1, 'Volume to Load (uL)'] = 'Enter 10X Version-Specific Cell Suspension Loading Volume'
+    df.loc[1, 'Cells to Load (e6)'] = 'Enter Desired Cell Loading'
+
+
+    book = load_workbook(file_name)
+    writer = pd.ExcelWriter(file_name, engine = 'openpyxl', mode = 'a')
+    writer.Workbook = book
+    df.to_excel(writer, index=False, sheet_name='Normalization')
+    writer.close()
 
 def main():
     start_time = time.time()
@@ -350,6 +421,7 @@ def main():
     permutation_selection(pad_selected_combo, pool_count)
     pad_pools_assigned = sample_assignment_to_pools(pad_selected_combo)
     output_pooling_table(pad_pools_assigned, pool_count)
-    output_counting_table(pad_pools_assigned)
+    output_counting_table(pad_pools_assigned, pool_count)
+    output_normalization_table(pool_count)
     print(f"\n--- {(time.time() - start_time):.2f} seconds ---\n")
 main()
