@@ -24,6 +24,12 @@ def directory_set_and_folder_creation():
     if not os.path.exists(os.path.dirname(os.path.abspath(__file__)) + '/Output'):
         os.makedirs(os.path.dirname(os.path.abspath(__file__)) + '/Output')
 
+#Docker functional code
+'''def directory_set_and_folder_creation():
+    os.chdir('/mnt/mydata')
+    if not os.path.exists('/mnt/mydata/Output'):
+        os.makedirs('/mnt/mydata/Output')'''
+
 #Allows the user to identify the file that has sample information for pooling.
 def file_identification():
     #Initializes a dictionary that is displayed to the user so that they can select the appropriate file.
