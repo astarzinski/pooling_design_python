@@ -17,8 +17,8 @@
   
 # Example input .xlsx file array:
           #Column 1       #Column 2      #Column 3      #Column 4
-# Row 1   Participant       Sample      sample_atr    participant_atr
-# Row 2       P1             1-1         screening        Male
-# Row 3       P1             1-2           week 1         Male
-# Row 4       P2             2-1         screening       Female
-# Row 5       P2             2-1           week 1        Female
+# Row 1   #Participant       #Sample      #sample_atr    #participant_atr
+# Row 2       #P1             #1-1         #screening        #Male
+# Row 3       #P1             #1-2           #week 1         #Male
+# Row 4       #P2             #2-1         #screening       #Female
+# Row 5       #P2             #2-1           #week 1        #Female
