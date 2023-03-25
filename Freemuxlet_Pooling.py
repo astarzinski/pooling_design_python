@@ -102,10 +102,22 @@ def pad_generator(s_list):
 #It uses the sample count from each participant to determine the participant with the greatest number of samples and adds one on top of that so the HC is the only sample in ALL pools.
 def minimum_pools_with_control_in_all_pools(min_pools_pad):
     min_pools = 0
+    sample_count_per_participant_dict = {}
     for key in min_pools_pad:
+        if min_pools_pad[key]['Sample_Count'] in sample_count_per_participant_dict:
+            sample_count_per_participant_dict[min_pools_pad[key]['Sample_Count']] += 1
+        else:
+            sample_count_per_participant_dict[min_pools_pad[key]['Sample_Count']] = 1
         if min_pools_pad[key]['Sample_Count'] > min_pools:
             min_pools = min_pools_pad[key]['Sample_Count']
+    print(sample_count_per_participant_dict)
     min_pools += 1
+    for participant_sample_count in sample_count_per_participant_dict:
+        while True:
+            if sample_count_per_participant_dict[participant_sample_count] > len(list(combinations(range(min_pools),participant_sample_count))):
+                min_pools += 1
+            else:
+                break
     return min_pools
 
 #This function is a simple user input point that allows the user to exceed the minimum number of pools if desired.
@@ -308,7 +320,6 @@ def output_pooling_table(output_pad, total_number_pools):
     df.loc[(total_number_pools + 1), 'Pool'] = " "
     df.loc[(total_number_pools + 2), 'Pool'] = 'Study:'
     df.loc[(total_number_pools + 3), 'Pool'] = " "
-    
     df.loc[(total_number_pools + 4), 'Pool'] = 'Healthy Control:'
     df.loc[(total_number_pools + 5), 'Pool'] = " "
     df.loc[(total_number_pools + 6), 'Pool'] = '10X Version:'
@@ -363,18 +374,18 @@ def output_counting_table(output_2_pad, tot_pool_count):
         df.loc[i, 'Sequence ID'] = item[0]
         df.loc[i, 'Sample ID'] = item[1]
         df.loc[i, 'Pool'] = item[2]
-        df.loc[i, 'Sequence ID.',] = f'=A{i+1}'
-        df.loc[i, 'Viable cells (e6/mL)',] = f'=IF(F{i+1}<>"",F{i+1}*E{i+1}/100,"")'
-        df.loc[i, 'Number of Cells Transferred (e6/mL)',] = f'=IF(F{i+1}<>"",I{i+1}/1000*F{i+1},"")'
-        df.loc[i, 'Volume to Tx (uL)',] = f'=IF(F{i+1}<>"",1000*((1.1/{((len(output_list)-1)/tot_pool_count) + 1})/F{i+1}),"")'
-        df.loc[i, 'Sequence ID..',] = f'=A{i+1}'
-        df.loc[i, 'Pool',] = item[2]
-        df.loc[i, 'Remaining Cell Mass (e6/mL) *Assumes 500uL Suspension Volume',] = f'=IF((F{i+1})>1,ROUND((F{i+1}/2)-0.5,1),"")'
-        df.loc[i, 'Study-Pt-Tp',] = f'=concatenate(\'Pooling Strategy\'!B{tot_pool_count + 3},"{item[1]}")'
-        df.loc[i, 'Remaining Cell Mass + e6',] = f'=IF(F{i+1}<>"",concatenate(L{i+1},"e6"),"")'
-        df.loc[i, 'Refrozen PBMC',] = 'Refrozen PBMC'
-        df.loc[i, 'Sequence ID...',] = f'=A{i+1}'
-        df.loc[i, 'Today\'s Date',] = '=today()'
+        df.loc[i, 'Sequence ID.'] = f'=A{i+1}'
+        df.loc[i, 'Viable cells (e6/mL)'] = f'=IF(F{i+1}<>"",F{i+1}*E{i+1}/100,"")'
+        df.loc[i, 'Number of Cells Transferred (e6/mL)'] = f'=IF(F{i+1}<>"",I{i+1}/1000*F{i+1},"")'
+        df.loc[i, 'Volume to Tx (uL)'] = f'=IF(F{i+1}<>"",1000*((1.1/{((len(output_list)-1)/tot_pool_count) + 1})/F{i+1}),"")'
+        df.loc[i, 'Sequence ID..'] = f'=A{i+1}'
+        df.loc[i, 'Pool'] = item[2]
+        df.loc[i, 'Remaining Cell Mass (e6/mL) *Assumes 500uL Suspension Volume'] = f'=IF((F{i+1})>1,ROUND((F{i+1}/2)-0.5,1),"")'
+        df.loc[i, 'Study-Pt-Tp'] = f'=concatenate(\'Pooling Strategy\'!B{tot_pool_count + 3},"{item[1]}")'
+        df.loc[i, 'Remaining Cell Mass + e6'] = f'=IF(F{i+1}<>"",concatenate(L{i+1},"e6"),"")'
+        df.loc[i, 'Refrozen PBMC'] = 'Refrozen PBMC'
+        df.loc[i, 'Sequence ID...'] = f'=A{i+1}'
+        df.loc[i, 'Today\'s Date'] = '=today()'
         i += 1
 
     book = load_workbook(file_name)
@@ -396,14 +407,12 @@ def output_normalization_table(tot_pools):
                                'cDNA Concentration (ng/uL)'])
     for i in range(1, tot_pools + 1):
         df.loc[i, 'Pool'] = i
+        df.loc[i, 'Final Volume (uL)'] = f'=IF(G{i+1}<>"",(B{i+1}*D{i+1})/G{i+1},"")'
+        df.loc[i, 'Media to Add to Make V2 (uL)'] = f'=IF(E{i+1}<>"",E{i+1}-D{i+1},"")'
+        df.loc[i, 'Target Cell Conc (e6/mL)'] = f'=IF(AND(ISNUMBER(H{i+1}),ISNUMBER(I{i+1})),I{i+1}/H{i+1}*1000,"")'
+        df.loc[i, 'Volume to Load (uL)'] = 'Enter 10X Version-Specific Cell Suspension Loading Volume'
+        df.loc[i, 'Cells to Load (e6)'] = 'Enter Desired Cell Loading'
         i += 1
-
-    df.loc[1, 'Final Volume (uL)'] = '=IF(G2<>"",(B2*D2)/G2,"")'
-    df.loc[1, 'Media to Add to Make V2 (uL)'] = '=IF(E2<>"",E2-D2,"")'
-    df.loc[1, 'Target Cell Conc (e6/mL)'] = '=IF(AND(ISNUMBER(H2),ISNUMBER(I2)),H2/I2*1000,"")'
-    df.loc[1, 'Volume to Load (uL)'] = 'Enter 10X Version-Specific Cell Suspension Loading Volume'
-    df.loc[1, 'Cells to Load (e6)'] = 'Enter Desired Cell Loading'
-
 
     book = load_workbook(file_name)
     writer = pd.ExcelWriter(file_name, engine = 'openpyxl', mode = 'a')
