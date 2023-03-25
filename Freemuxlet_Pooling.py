@@ -110,9 +110,12 @@ def minimum_pools_with_control_in_all_pools(min_pools_pad):
             sample_count_per_participant_dict[min_pools_pad[key]['Sample_Count']] = 1
         if min_pools_pad[key]['Sample_Count'] > min_pools:
             min_pools = min_pools_pad[key]['Sample_Count']
-    print(sample_count_per_participant_dict)
     min_pools += 1
+    #This loop is an essential check to see if there are too many participants with a given number of samples such that
+        #together they exceed the combinatoric capacity of the current number of alotted pools.
     for participant_sample_count in sample_count_per_participant_dict:
+        #This while loop is needed to check if more than a single incrementation in pool count is needed to accomodate the number of
+            #individual participants with a given sample count.
         while True:
             if sample_count_per_participant_dict[participant_sample_count] > len(list(combinations(range(min_pools),participant_sample_count))):
                 min_pools += 1
@@ -222,7 +225,7 @@ def combo_selection(c_s_pad, number_pools):
                 participant_attribute_counter[pool_integer][p_att_key][c_s_pad[participant]["Participant_Attributes"][p_att_key]] += 1
         #The chosen combination is added to the participants entry in the core dictionary of this program.
         c_s_pad[participant]["Selected_Combo"] = best_combo
-    return(c_s_pad)
+    return(c_s_pad, pool_counter_dict)
 
 #This function contains a scoring system for all of the permutations of the combination selected above for each participant.
 #It will test these permutations and assign one that best balances sample-specific attributes across the pools.
@@ -336,64 +339,91 @@ def output_pooling_table(output_pad, total_number_pools):
             df.loc[sample_info_dict['Pool'] - 1, participant] = sample
     #Set a name for the file based on the current date and time.
     global file_name 
-    file_name = f'Output/Pooling_Strategy_{today.strftime("Date_%Y_%m_%d_Time_%H_%M_%S").replace("/","_")}.xlsx'
+    file_name = f'Output/Experiment_Strategy_{today.strftime("Date_%Y_%m_%d_Time_%H_%M_%S").replace("/","_")}.xlsx'
     #Export the data frame to an excel file for use in further experimental planning.
     df.to_excel(file_name, index=False, sheet_name='Pooling Strategy')
 
-def output_counting_table(output_2_pad, tot_pool_count):
+
+#Adds a new tab to the excel file that will give users a place to add in sample counts, and will output key experiment data.
+def output_counting_table(output_2_pad, tot_pool_count, num_samples_per_pool):
+    #Initialize a list with the HC sample accounted for in the first position and assigned to pool 0 for sorting purposes.
     output_list = [['HC', 'HC', 0]]
     for participant in output_2_pad:
+        #Create a list for each participant sample [0] will hold 'Sequence ID', [1] is 'Sample ID', and [2] is 'Pool'
         for sample in output_2_pad[participant]['Sample_IDs']:
             participant_list = [0, sample, output_2_pad[participant]['Sample_IDs'][sample]['Pool']]
+            #Add each individual sample list to the larger output list.
             output_list.append(participant_list)
+    #Sort the list by pool.
     output_list.sort(key = lambda x: x[2])
+    #Assign a sequence ID to each sample in the sorted output list at index [0] of the sample list.
     i = 1
     for item in output_list:
+        if item[0] == 'HC':
+            continue
         item[0] = i
         i += 1
     
-    df = pd.DataFrame(columns=['Sequence ID',
-                               'Sample ID',
-                               'Pool',
-                               'Sequence ID.',
-                               'Viability (%)',
-                               'Total cells (e6/mL)',
-                               'Viable cells (e6/mL)',
-                               'Number of Cells Transferred (e6/mL)',
-                               'Volume to Tx (uL)',
-                               'Sequence ID..',
-                               'Pool',
-                               'Remaining Cell Mass (e6/mL) *Assumes 500uL Suspension Volume',
-                               'Study-Pt-Tp',
-                               'Remaining Cell Mass + e6',
-                               'Refrozen PBMC',
-                               'Sequence ID...',
-                               'Today\'s Date',])
+    #Initialize a data frame with all of the columns needed for counting samples, proceeding with the multiplex, and tracking remaining cell mass for refreezing.
+    df = pd.DataFrame(columns=['Sequence ID', #A
+                               'Sample ID', #B
+                               'Pool', #C
+                               'Sequence ID.', #D
+                               'Viability (%)', #E
+                               'Total cells (e6/mL)', #F
+                               'Viable cells (e6/mL)', #G
+                               'Number of Cells Transferred (e6/mL)', #H
+                               'Volume to Tx (uL)', #I
+                               'Sequence ID..', #J
+                               'Pool', #K
+                               'Study-Pt-Tp', #L
+                               'Remaining Cell Mass + e6 *Assumes 500uL Suspension Volume', #M
+                               'Refrozen PBMC', #N
+                               'Sequence ID...', #O
+                               'Today\'s Date',]) #P
+    
+    #At each index add the appropriate data to each column.
+    #Sequence ID is repeated throughout the data frame with the addition of '.' characters for column targeting.
+    #However the subsequent Sequence ID columns all reference the first value in case of any user alterations.
+    #i+1 is seen throughout because data frame row indicies and excel row indicies are offset by 1
     i = 1
     for item in output_list:
         df.loc[i, 'Sequence ID'] = item[0]
         df.loc[i, 'Sample ID'] = item[1]
         df.loc[i, 'Pool'] = item[2]
         df.loc[i, 'Sequence ID.'] = f'=A{i+1}'
+        #Multiplies the total cell count by the percentage viable and divides by 100.
         df.loc[i, 'Viable cells (e6/mL)'] = f'=IF(F{i+1}<>"",F{i+1}*E{i+1}/100,"")'
+        #Uses the volume transferred and the cell concentration to track how many cells from each sample are pooled.
         df.loc[i, 'Number of Cells Transferred (e6/mL)'] = f'=IF(F{i+1}<>"",I{i+1}/1000*F{i+1},"")'
-        df.loc[i, 'Volume to Tx (uL)'] = f'=IF(F{i+1}<>"",1000*((1.1/{((len(output_list)-1)/tot_pool_count) + 1})/F{i+1}),"")'
+        #Takes the number of samples in this samples pool and divides 1.1 by that number to determine
+            #the e6 cell count that should be added.
+        #References the tracking dictionary created when generating ideal combinations and adds 1 due to the HC sample.
+        if item[2] == 0:
+            df.loc[i, 'Volume to Tx (uL)'] = f'=IF(F{i+1}<>"",1000*((1.1/{((len(output_list)-1)/tot_pool_count) + 1})/F{i+1}),"")'
+        else:
+            df.loc[i, 'Volume to Tx (uL)'] = f'=IF(F{i+1}<>"",1000*((1.1/{num_samples_per_pool[item[2]] + 1})/F{i+1}),"")'
         df.loc[i, 'Sequence ID..'] = f'=A{i+1}'
         df.loc[i, 'Pool'] = item[2]
-        df.loc[i, 'Remaining Cell Mass (e6/mL) *Assumes 500uL Suspension Volume'] = f'=IF((F{i+1})>1,ROUND((F{i+1}/2)-0.5,1),"")'
-        df.loc[i, 'Study-Pt-Tp'] = f'=concatenate(\'Pooling Strategy\'!B{tot_pool_count + 3},"{item[1]}")'
-        df.loc[i, 'Remaining Cell Mass + e6'] = f'=IF(F{i+1}<>"",concatenate(L{i+1},"e6"),"")'
+        #The newer '=CONCAT()' function leads to a prepended '@' character and disrupts function therefore '=CONCATENATE()' is used.
+        #"\'Pooling Strategy\'!B{tot_pool_count + 3}" references the exact cell in which the study ID is to be recorded.
+        df.loc[i, 'Study-Pt-Tp'] = f'=IF(\'Pooling Strategy\'!B{tot_pool_count + 3}<>"",concatenate(\'Pooling Strategy\'!B{tot_pool_count + 3},"-{item[1]}"),"")'
+        #Calculates and rounds the cell mass that remains after the needed cell suspension is used in the experiment.
+        #This number will be used to help create the refrozen sample labels.
+        df.loc[i, 'Remaining Cell Mass + e6 *Assumes 500uL Suspension Volume'] = f'=IF((F{i+1})>1,concatenate(ROUND((F{i+1}/2)-0.5,1),"e6"),"")'
         df.loc[i, 'Refrozen PBMC'] = 'Refrozen PBMC'
         df.loc[i, 'Sequence ID...'] = f'=A{i+1}'
         df.loc[i, 'Today\'s Date'] = '=today()'
         i += 1
-
+    #Special existing file access function.
     book = load_workbook(file_name)
+    #Mode 'a' will append instead of overwrite ('w')
     writer = pd.ExcelWriter(file_name, engine = 'openpyxl', mode = 'a')
     writer.Workbook = book
     df.to_excel(writer, index=False, sheet_name='Sample Counts')
     writer.close()
 
+#Adds a normalization tab to the existing excel file that is used at the end of the experiment to prepare samples for the single cell sequencing process.
 def output_normalization_table(tot_pools):
     df = pd.DataFrame(columns=['Pool',
                                'Total Cells (e6/mL)',
@@ -405,15 +435,19 @@ def output_normalization_table(tot_pools):
                                'Volume to Load (uL)',
                                'Cells to Load (e6)',
                                'cDNA Concentration (ng/uL)'])
+    #Adds an entry for each pool.
     for i in range(1, tot_pools + 1):
         df.loc[i, 'Pool'] = i
+        #Calculates the final cell suspension volume that will contain the desired number of cells in the volume called for in the 10X protocol.
         df.loc[i, 'Final Volume (uL)'] = f'=IF(G{i+1}<>"",(B{i+1}*D{i+1})/G{i+1},"")'
+        #Determines the volume that should be added to reach the final volume from the existing/initial cell suspension volume.
         df.loc[i, 'Media to Add to Make V2 (uL)'] = f'=IF(E{i+1}<>"",E{i+1}-D{i+1},"")'
+        #Based on the loading volume and desired cell mass.
         df.loc[i, 'Target Cell Conc (e6/mL)'] = f'=IF(AND(ISNUMBER(H{i+1}),ISNUMBER(I{i+1})),I{i+1}/H{i+1}*1000,"")'
         df.loc[i, 'Volume to Load (uL)'] = 'Enter 10X Version-Specific Cell Suspension Loading Volume'
         df.loc[i, 'Cells to Load (e6)'] = 'Enter Desired Cell Loading'
         i += 1
-
+    #Same as annotated above.
     book = load_workbook(file_name)
     writer = pd.ExcelWriter(file_name, engine = 'openpyxl', mode = 'a')
     writer.Workbook = book
@@ -426,11 +460,11 @@ def main():
     user_sample_list = file_identification()
     pad = pad_generator(user_sample_list)
     pool_count = pool_count_determination(pad)
-    pad_selected_combo = combo_selection(pad, pool_count)
+    pad_selected_combo, samples_per_pool_dict = combo_selection(pad, pool_count)
     permutation_selection(pad_selected_combo, pool_count)
     pad_pools_assigned = sample_assignment_to_pools(pad_selected_combo)
     output_pooling_table(pad_pools_assigned, pool_count)
-    output_counting_table(pad_pools_assigned, pool_count)
+    output_counting_table(pad_pools_assigned, pool_count, samples_per_pool_dict)
     output_normalization_table(pool_count)
     print(f"\n--- {(time.time() - start_time):.2f} seconds ---\n")
 main()
