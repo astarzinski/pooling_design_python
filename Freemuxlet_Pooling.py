@@ -400,7 +400,7 @@ def output_counting_table(output_2_pad, tot_pool_count, num_samples_per_pool):
             #the e6 cell count that should be added.
         #References the tracking dictionary created when generating ideal combinations and adds 1 due to the HC sample.
         if item[2] == 0:
-            df.loc[i, 'Volume to Tx (uL)'] = f'=IF(F{i+1}<>"",1000*((1.1/{((len(output_list)-1)/tot_pool_count) + 1})/F{i+1}),"")'
+            df.loc[i, 'Volume to Tx (uL)'] = f'=IF(F{i+1}<>"",1000*((0.55/{((len(output_list)-1)/tot_pool_count) + 1})/F{i+1}),"")'
         else:
             df.loc[i, 'Volume to Tx (uL)'] = f'=IF(F{i+1}<>"",1000*((1.1/{num_samples_per_pool[item[2]] + 1})/F{i+1}),"")'
         df.loc[i, 'Sequence ID..'] = f'=A{i+1}'
