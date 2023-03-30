@@ -126,7 +126,7 @@ def minimum_pools_with_control_in_all_pools(min_pools_pad):
 #This function is a simple user input point that allows the user to exceed the minimum number of pools if desired.
 def user_determined_pool_count():
     while True:
-        pool_count = input('If you have a desired number of pools\nenter the interger now.\nElse hit return.\n')
+        pool_count = input('\n~~~~~~~~~~~~~~~\nIf you have a desired number of pools\nenter the interger now.\nElse press <return>.\n')
         if pool_count != '':
             try:
                 pool_count = int(pool_count)
