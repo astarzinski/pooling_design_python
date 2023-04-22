@@ -27,10 +27,10 @@ def directory_set_and_folder_creation():
         os.makedirs(os.path.dirname(os.path.abspath(__file__)) + '/Output')
 
 #Docker directory access (must be defined in the run command)
-'''def directory_set_and_folder_creation():
-    os.chdir('/mnt/mydata')
-    if not os.path.exists('/mnt/mydata/Output'):
-        os.makedirs('/mnt/mydata/Output')'''
+# def directory_set_and_folder_creation():
+#     os.chdir('/mnt/mydata')
+#     if not os.path.exists('/mnt/mydata/Output'):
+#         os.makedirs('/mnt/mydata/Output')
 
 #Allows the user to identify the file that has sample information for pooling.
 def file_identification():
