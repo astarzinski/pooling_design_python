@@ -99,6 +99,20 @@ def pad_generator(s_list):
         pool_assignment_dictionary[participant]['Sample_Count'] = participant_sample_count
     return pool_assignment_dictionary
 
+def pad_representation(pad_rep):
+    for participant in pad_rep:
+        print('=' * 50 + '\n' + f'Participant: {participant}')
+        print('\nParticipant Attributes:')
+        for p_attribute, p_attribute_val in pad_rep[participant]['Participant_Attributes'].items():
+            print(f'    {p_attribute:<20}: {p_attribute_val:<20}')
+        print('\nSamples:')
+        for sample in pad_rep[participant]['Sample_IDs']:
+            print(f'    {sample}')
+            for s_attribute, s_attribute_val in pad_rep[participant]['Sample_IDs'][sample].items():
+                if s_attribute != 'Pool':
+                    print(f'        {s_attribute:<20}: {s_attribute_val:<20}')
+            print()
+
 #This function determines the minimum number of pools to include all the samples listed and have one healthy control that spans all of the pools.
 #It uses the sample count from each participant to determine the participant with the greatest number of samples and adds one on top of that so the HC is the only sample in ALL pools.
 def minimum_pools_with_control_in_all_pools(min_pools_pad):
@@ -452,6 +466,7 @@ def main():
     directory_set_and_folder_creation()
     user_sample_list = file_identification()
     pad = pad_generator(user_sample_list)
+    pad_representation(pad)
     pool_count = pool_count_determination(pad)
     p_attribute_collection = participant_attribute_collector(pad)
     pad_selected_combo, samples_per_pool_dict = combo_selection(pad, pool_count, p_attribute_collection)
