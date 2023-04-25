@@ -209,9 +209,10 @@ def combo_selection(c_s_pad, number_pools, pac):
                     #These could be collectively weighted (but that doesn't make sense if you are also weighting pool counts),
                         #or they could be ###Iteratively Weighted### to allow prioritization of attributes present in earlier columns over those present in later columns.
                     for p_att_key in participant_attribute_counter[pool_integer]:
-                                                                                              #This entire region identifies the attribute value########
+                                                        #PAD  #Participant #P. Att. Dict.            #attribute
+                        participant_attribute_value = c_s_pad[participant]["Participant_Attributes"][p_att_key]
                                        #counter dict                 #pool        #attribute   #pad  #participant #The attr. for that part.  #attribute
-                        combo_score += participant_attribute_counter[pool_integer][p_att_key][c_s_pad[participant]["Participant_Attributes"][p_att_key]]
+                        combo_score += participant_attribute_counter[pool_integer][p_att_key][participant_attribute_value]
                 #A simple comparison will reassign best combo to the current combo if the score is lower.
                 #lowest combo score is also set to the lower value if true.
                 if combo_score < lowest_combo_score:
@@ -226,9 +227,10 @@ def combo_selection(c_s_pad, number_pools, pac):
             pool_counter_dict[pool_integer] += 1
             #Updating the value for the participant level attibutes is... complicated because of the nested dictionaries involved in both the reference and destination for the data update.
             for p_att_key in participant_attribute_counter[pool_integer]:
-                                                                      #This entire region identifies the attribute value########
-                #counter dict                 #pool        #attribute   #pad  #participant #The attr. for that part.  #attribute
-                participant_attribute_counter[pool_integer][p_att_key][c_s_pad[participant]["Participant_Attributes"][p_att_key]] += 1
+                                                #PAD  #Participant #P. Att. Dict.            #attribute
+                participant_attribute_value = c_s_pad[participant]["Participant_Attributes"][p_att_key]
+                #Counter Dict                 #Pool        #Attribute  
+                participant_attribute_counter[pool_integer][p_att_key][participant_attribute_value] += 1
         #The chosen combination is added to the participants entry in the core dictionary of this program.
         c_s_pad[participant]["Selected_Combo"] = best_combo
     [print(key,value) for key,value in participant_attribute_counter.items()]
@@ -269,10 +271,11 @@ def permutation_selection(ps_pad, perm_pool_count, sac):
             for pool_integer, sample in zip(perm, ps_pad[participant]['Sample_IDs']):
                 #Iterates through each sample attribute in the counter dictionary.
                 for s_att_key in sample_attribut_counter[pool_integer]:
-                    #Adds the number of samples that exist in the relevant pool with matching attribute values to the sample being considered for the pool to the permutation score.
-                                                                                  #This region identifies the attribute value###########                              
-                                  #Counter Dict           #Pool         #Attribute  #PAD  #Participant  #Sample Dict #Sample #Attribute
-                    perm_score += sample_attribut_counter[pool_integer][s_att_key][ps_pad[participant]['Sample_IDs'][sample][s_att_key]]
+                                             #PAD  #Participant  #Sample Dict #Sample #Attribute
+                    sample_attribute_value = ps_pad[participant]['Sample_IDs'][sample][s_att_key]
+                    #Adds the number of samples that exist in the relevant pool with matching attribute values to the sample being considered for the pool to the permutation score.                             
+                                  #Counter Dict           #Pool         #Attribute  
+                    perm_score += sample_attribut_counter[pool_integer][s_att_key][sample_attribute_value]
             #A simple comparison to determine if the current permuation and its score should replace the existing values
             if perm_score < lowest_perm_score:
                 lowest_perm_score = perm_score
@@ -281,9 +284,10 @@ def permutation_selection(ps_pad, perm_pool_count, sac):
         #Value increment is structured in the same fashion as the value check in the previous loop.
         for pool_integer, sample in zip(best_perm, ps_pad[participant]['Sample_IDs']):
             for s_att_key in sample_attribut_counter[pool_integer]:
-                                                                #This region identifies the attribute value###########                              
-                #Counter Dict           #Pool         #Attribute  #PAD  #Participant  #Sample Dict #Sample #Attribute
-                sample_attribut_counter[pool_integer][s_att_key][ps_pad[participant]['Sample_IDs'][sample][s_att_key]] += 1
+                                          #PAD  #Participant  #Sample Dict #Sample #Attribute
+                sample_attribute_value = ps_pad[participant]['Sample_IDs'][sample][s_att_key]                           
+                #Counter Dict           #Pool         #Attribute  
+                sample_attribut_counter[pool_integer][s_att_key][sample_attribute_value] += 1
         #The selected permutation is then noted in the core dictionary.
         ps_pad[participant]['Selected_Perm'] = best_perm
     return(ps_pad)
